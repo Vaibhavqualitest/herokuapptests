@@ -3,6 +3,10 @@ package herokutests;
 import java.nio.*;
 import java.io.*;
 
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.checkerframework.checker.units.qual.A;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
@@ -27,7 +31,7 @@ public class HerokuAppTests {
     @BeforeMethod
     @BeforeSuite
     public static void setup(){
-        System.setProperty("webdriver.chrome.driver", "C:\\Users\\vaibhav.bajpai\\Downloads\\chromedriver_win32\\chromedriver.exe");
+        System.setProperty("webdriver.chrome.driver", "C:\\Users\\vaibhav.bajpai\\Downloads\\chromedriver_win32 (1)\\chromedriver.exe");
         driver = new ChromeDriver();
         driver.get("http://the-internet.herokuapp.com/");
         driver.manage().window().maximize();
@@ -135,11 +139,11 @@ public class HerokuAppTests {
         driver.findElement(By.cssSelector("a[href=\"/drag_and_drop\"]")).click();
         WebElement elementA = driver.findElement(By.cssSelector("#column-a"));
         WebElement elementB = driver.findElement(By.cssSelector("#column-b"));
-        int x=elementB.getLocation().getX();
-        int y=elementB.getLocation().getY();
+
         Actions actions = new Actions(driver);
-        actions.dragAndDrop(elementA, elementB).build().perform();
-        driver.navigate().back();
+//        actions.dragAndDrop(elementA, elementB).build().perform();
+        actions.dragAndDrop(elementA, elementB).perform();
+//        driver.navigate().back();
     }
 
     @Test(description = "Dropdown test")
@@ -148,7 +152,7 @@ public class HerokuAppTests {
         WebElement dropdown = driver.findElement(By.id("dropdown"));
         Select sc = new Select(dropdown);
         sc.selectByValue("2");
-//        String isSelected = driver.findElement(By.id("dropdown")).getText();
+//        boolean isSelected = driver.findElement(By.id("dropdown")).isSelected();
 //        System.out.println(isSelected);
         driver.navigate().back();
     }
@@ -545,5 +549,48 @@ public class HerokuAppTests {
         String text2 = driver.findElement(By.cssSelector("#content > div > p:nth-child(3)")).getText();
         Assert.assertEquals(text2, "Sometimes you'll see a typo, other times you won,t.");
         driver.navigate().back();
+    }
+
+    @Test(description = "Infinite scroll")
+    public void infiniteScrollTest() throws InterruptedException {
+        driver.findElement(By.cssSelector("a[href=\"/infinite_scroll\"]")).click();
+        Thread.sleep(2000);
+        JavascriptExecutor js = (JavascriptExecutor) driver;
+        js.executeScript("window.scrollBy(0,3500)", "");
+    }
+
+    @Test
+    public void validateInvalidImages() {
+        try {
+            driver.findElement(By.cssSelector("a[href=\"/broken_images\"]")).click();
+            int invalidImageCount = 0;
+            List<WebElement> imagesList = driver.findElements(By.tagName("img"));
+            System.out.println("Total no. of images are " + imagesList.size());
+            for (WebElement imgElement : imagesList) {
+                if (imgElement != null) {
+                    verifyimageActive(imgElement);
+                }
+            }
+            System.out.println("Total no. of invalid images are "	+ invalidImageCount);
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println(e.getMessage());
+        }
+    }
+
+
+    public void verifyimageActive(WebElement imgElement) {
+        try {
+            HttpClient client = HttpClientBuilder.create().build();
+            HttpGet request = new HttpGet(imgElement.getAttribute("src"));
+            HttpResponse response = client.execute(request);
+            // verifying response code he HttpStatus should be 200 if not,
+            // increment as invalid images count
+            int invalidImageCount=0;
+            if (response.getStatusLine().getStatusCode() != 200)
+                invalidImageCount++;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
